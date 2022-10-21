@@ -1,13 +1,27 @@
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import './index.css';
-import App from './App';
-import reportWebVitals from './reportWebVitals';
+import React from "react";
+import ReactDOM from "react-dom/client";
+import "./index.css";
+import App from "./App";
+import reportWebVitals from "./reportWebVitals";
+import { extendTheme, ChakraProvider } from "@chakra-ui/react";
 
-const root = ReactDOM.createRoot(document.getElementById('root'));
+// 2. Extend the theme to include custom colors, fonts, etc
+const colors = {
+  teal: {
+    50: "#E6FFFA",
+    100: "#B2F5EA",
+    200: "#81E6D9",
+    300: "#4FD1C5",
+  },
+};
+const theme = extendTheme({ colors });
+
+const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
   <React.StrictMode>
-    <App />
+    <ChakraProvider theme={theme}>
+      <App />
+    </ChakraProvider>
   </React.StrictMode>
 );
 
