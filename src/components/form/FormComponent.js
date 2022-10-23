@@ -10,9 +10,24 @@ import {
 import styles from "./FormComponent.module.css";
 import axios from "axios";
 import { useState } from "react";
-const FormComponent = () => {
+import { ArrowBackIcon } from "@chakra-ui/icons";
+const FormComponent = (props) => {
   //Get geolocation
-  const [isDGeoDenied, setIsDGeoDenied] = useState(false);
+  const [isFetching, setIsFetching] = useState(false);
+  const [isError, setIsError] = useState({
+    isError: false,
+    message: "",
+  });
+  const [resultFetch, setResultFetch] = useState({
+    status: false,
+    weather: "",
+    description: "",
+    icon: "",
+    temp: "",
+    city: "",
+    humidity: "",
+    feelLike: "",
+  });
   const getLocation = async () => {
     //Check if permission is
     if (navigator.geolocation) {
@@ -22,13 +37,17 @@ const FormComponent = () => {
           .query({ name: "geolocation" })
           .then(function (result) {
             if (result.state === "granted") {
-              console.log("granted");
+              // console.log("granted");
               return true;
             } else if (result.state === "prompt") {
-              console.log("prompted");
+              // console.log("prompted");
               return true;
             } else if (result.state === "denied") {
-              console.log("denied");
+              // console.log("denied");
+              setIsError({
+                isError: true,
+                message: "Please allow geolocation",
+              });
               return false;
             }
             result.onchange = function () {
@@ -40,61 +59,122 @@ const FormComponent = () => {
           const lat = position.coords.latitude;
           const lon = position.coords.longitude;
 
+          setIsError({
+            isError: false,
+            message: "",
+          });
+          setIsFetching(true);
           axios
             .get(
               `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${process.env.REACT_APP_API_KEY}&units=metric`
             )
             .then((res) => {
-              console.log(res.data);
+              setIsFetching(false);
+              setResultFetch({
+                status: true,
+                weather: res.data.weather[0].main,
+                description: res.data.weather[0].description,
+                icon: res.data.weather[0].icon,
+                temp: res.data.main.temp,
+                city: res.data.name,
+                humidity: res.data.main.humidity,
+                feelLike: res.data.main.feels_like,
+              });
+              props.handleResultState({
+                status: true,
+                weather: res.data.weather[0].main,
+                description: res.data.weather[0].description,
+                icon: res.data.weather[0].icon,
+                temp: res.data.main.temp,
+                city: res.data.name,
+                humidity: res.data.main.humidity,
+                feelLike: res.data.main.feels_like,
+              });
+              console.log(resultFetch);
             })
             .catch((err) => {
-              console.log(err);
+              setIsFetching(false);
+              if (err.response.status === 404) {
+                return setIsError({
+                  isError: true,
+                  message: "City not found",
+                });
+              }
+              setIsError({
+                isError: true,
+                message: "Something went wrong",
+              });
             });
         });
     } else {
       alert("Geolocation is not supported by this browser.");
     }
   };
-  // const showPosition = (position) => {
-  //   // return result
-  //   console.log("Latitude: " + position.coords.latitude);
-  //   console.log("Longitude: " + position.coords.longitude);
-  //   return position;
-  //   return {
-  //     lat: position.coords.latitude,
-  //     long: position.coords.longitude,
-  //   };
-  // };
 
   const handleGetLocation = () => {
     ///Get location
     getLocation();
   };
-
   const handleSubmitForm = (e) => {
     e.preventDefault();
     //Get value form
     const city = e.target.city.value;
+    //Check if city is empty
+    if (city === "") {
+      return setIsError({
+        isError: true,
+        message: "Please enter a city",
+      });
+    }
     console.log(city);
     //Get data from API
+    setIsError({
+      isError: false,
+      message: "",
+    });
+    setIsFetching(true);
     axios
       .get(
-        `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${process.env.REACT_APP_API_KEY}`
+        `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${process.env.REACT_APP_API_KEY}&units=metric`
       )
       .then((res) => {
+        setIsFetching(false);
+        setResultFetch({
+          status: true,
+          weather: res.data.weather[0].main,
+          description: res.data.weather[0].description,
+          icon: res.data.weather[0].icon,
+          temp: res.data.main.temp,
+          city: res.data.name,
+          humidity: res.data.main.humidity,
+          feelLike: res.data.main.feels_like,
+        });
+        props.handleResultState({
+          status: true,
+          weather: res.data.weather[0].main,
+          description: res.data.weather[0].description,
+          icon: res.data.weather[0].icon,
+          temp: res.data.main.temp,
+          city: res.data.name,
+          humidity: res.data.main.humidity,
+          feelLike: res.data.main.feels_like,
+        });
         console.log(res.data);
       })
       .catch((err) => {
+        setIsFetching(false);
+        if (err.response.status === 404) {
+          return setIsError({
+            isError: true,
+            message: "City not found",
+          });
+        }
+        setIsError({
+          isError: true,
+          message: "Something went wrong",
+        });
         console.log(err);
       });
-    // axios
-    //   .post("http://localhost:3000/api", data)
-    //   .then((res) => {
-    //     console.log(res);
-    //   })
-    //   .catch((err) => {
-    //     console.log(err);
-    //   });
   };
 
   return (
@@ -106,9 +186,38 @@ const FormComponent = () => {
       h="20rem"
       p={8}
     >
-      <Text fontSize="2xl" as="b" color="teal" mb={8}>
+      <Text fontSize="2xl" as="b" color="teal" mb={isError ? 5 : 8}>
         Weather App
       </Text>
+
+      {isFetching && (
+        <Box
+          mb={3}
+          bgColor="#D3DEDE"
+          h={10}
+          alignItems="center"
+          display="flex"
+          justifyContent="center"
+        >
+          <Text fontSize="md" color="teal.500">
+            Fetching data...
+          </Text>
+        </Box>
+      )}
+      {isError.isError && (
+        <Box
+          mb={3}
+          bgColor="#F4E7E1"
+          h={10}
+          alignItems="center"
+          display="flex"
+          justifyContent="center"
+        >
+          <Text fontSize="md" color="teal">
+            {isError.message}
+          </Text>
+        </Box>
+      )}
       <form onSubmit={handleSubmitForm}>
         <Box display="flex" flexDirection="row">
           <InputGroup size="sm">
@@ -140,6 +249,38 @@ const FormComponent = () => {
           Get Current Location
         </Button>
       </form>
+      {resultFetch.status && (
+        <Box
+          display="flex"
+          flexDirection="column"
+          mt={5}
+          bgColor="#D3DEDE"
+          p={5}
+          borderRadius="md"
+        >
+          <Box>
+            <ArrowBackIcon />
+            <Text fontSize="xl" as="b" color="teal">
+              {resultFetch.city}
+            </Text>
+          </Box>
+          {/* <Text fontSize="xl" as="b" color="teal">
+            {resultFetch.city}
+          </Text> */}
+          <Text fontSize="md" color="teal">
+            {resultFetch.weather}
+          </Text>
+          <Text fontSize="md" color="teal">
+            {resultFetch.temp}°C
+          </Text>
+          <Text fontSize="md" color="teal">
+            Humidity: {resultFetch.humidity}%
+          </Text>
+          <Text fontSize="md" color="teal">
+            Feels like: {resultFetch.feelLike}°C
+          </Text>
+        </Box>
+      )}
     </Box>
   );
 };
